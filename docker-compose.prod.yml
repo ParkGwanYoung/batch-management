@@ -1,0 +1,48 @@
+services:
+
+  # =========================================================
+  # Spring Boot
+  # =========================================================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: batch-backend
+
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+
+      # AWS 운영 환경
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      SPRING_JPA_SHOW_SQL: "false"
+      SPRING_BATCH_JDBC_INITIALIZE_SCHEMA: never
+
+      JWT_SECRET: ${JWT_SECRET}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL}
+
+    expose:
+      - "8080"
+
+    restart: unless-stopped
+
+
+  # =========================================================
+  # React + Nginx
+  # =========================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+
+    container_name: batch-frontend
+
+    ports:
+      - "80:80"
+
+    depends_on:
+      - backend
+
+    restart: unless-stopped
