@@ -10,14 +10,22 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
-public interface BatchExecutionRepository extends JpaRepository<BatchExecution, Long> {
+public interface BatchExecutionRepository
+        extends JpaRepository<BatchExecution, Long> {
 
-    @Query("""
-        SELECT e
-        FROM BatchExecution e
-        JOIN FETCH e.batchJob
-        WHERE e.batchJob.id = :batchJobId
-    """)
+    @Query(
+            value = """
+                    SELECT e
+                    FROM BatchExecution e
+                    JOIN FETCH e.batchJob
+                    WHERE e.batchJob.id = :batchJobId
+                    """,
+            countQuery = """
+                    SELECT COUNT(e)
+                    FROM BatchExecution e
+                    WHERE e.batchJob.id = :batchJobId
+                    """
+    )
     Page<BatchExecution> findExecutions(
             @Param("batchJobId") Long batchJobId,
             Pageable pageable
@@ -30,16 +38,26 @@ public interface BatchExecutionRepository extends JpaRepository<BatchExecution, 
     );
 
     @Query("""
-        SELECT e
-        FROM BatchExecution e
-        JOIN FETCH e.batchJob
-        WHERE e.id = :id
-    """)
+            SELECT e
+            FROM BatchExecution e
+            JOIN FETCH e.batchJob
+            WHERE e.id = :id
+            """)
     Optional<BatchExecution> findByIdWithBatchJob(
             @Param("id") Long id
     );
 
-    Optional<BatchExecution> findTopByBatchJobIdAndTriggerTypeOrderByStartTimeDesc(
+    @Query("""
+            SELECT e.batchJob.id
+            FROM BatchExecution e
+            WHERE e.id = :executionId
+            """)
+    Optional<Long> findBatchJobIdByExecutionId(
+            @Param("executionId") Long executionId
+    );
+
+    Optional<BatchExecution>
+    findTopByBatchJobIdAndTriggerTypeOrderByStartTimeDesc(
             Long batchJobId,
             String triggerType
     );
@@ -50,9 +68,9 @@ public interface BatchExecutionRepository extends JpaRepository<BatchExecution, 
     );
 
     @Query("""
-    SELECT e.status, COUNT(e.id)
-    FROM BatchExecution e
-    GROUP BY e.status
-    """)
+            SELECT e.status, COUNT(e.id)
+            FROM BatchExecution e
+            GROUP BY e.status
+            """)
     List<Object[]> countGroupByStatus();
 }
