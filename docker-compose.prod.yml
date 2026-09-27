@@ -11,6 +11,8 @@ services:
     container_name: batch-backend
 
     environment:
+      JAVA_TOOL_OPTIONS: "-Duser.timezone=Asia/Seoul"
+
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
