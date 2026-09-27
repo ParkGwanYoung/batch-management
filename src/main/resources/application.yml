@@ -22,15 +22,19 @@ spring:
     job:
       enabled: false
 
-
 server:
   port: 8080
-
 
 jwt:
   secret: ${JWT_SECRET}
   expiration: 1800000
 
-
 slack:
   webhook-url: ${SLACK_WEBHOOK_URL:}
+
+app:
+  batch:
+    chunk-size: 100
+    page-size: 100
+    retry-limit: 3
+    skip-limit: 5
