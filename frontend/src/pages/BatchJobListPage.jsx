@@ -14,6 +14,11 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
     const [batchJobs, setBatchJobs] = useState([])
     const [loading, setLoading] = useState(true)
     const [message, setMessage] = useState('')
+    const [keywordInput, setKeywordInput] = useState('')
+    const [query, setQuery] = useState({ page: 0, size: 10, keyword: '' })
+    const [totalPages, setTotalPages] = useState(0)
+    const [totalElements, setTotalElements] = useState(0)
+    const listAbortRef = useRef(null)
 
 
     // =========================================================
@@ -101,62 +106,80 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
     // =========================================================
 
     const fetchBatchJobs = useCallback(async () => {
-
+        listAbortRef.current?.abort()
+        const controller = new AbortController()
+        listAbortRef.current = controller
         setLoading(true)
         setMessage('')
 
         try {
+            const params = new URLSearchParams({
+                page: String(query.page),
+                size: String(query.size),
+                sort: 'id,desc',
+            })
+            if (query.keyword) params.set('keyword', query.keyword)
 
-            const response = await fetch(
-                '/api/batch-jobs?page=0&size=10',
-                {
-                    method: 'GET',
-                    headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                    },
-                }
-            )
+            const response = await fetch('/api/batch-jobs?' + params.toString(), {
+                headers: { Authorization: `Bearer ${accessToken}` },
+                signal: controller.signal,
+            })
 
+            if (controller.signal.aborted) return
             if (response.status === 401) {
                 onLogout()
                 return
             }
-
-            if (response.status === 403) {
-                throw new Error(
-                    '배치 목록 조회 권한이 없습니다.'
-                )
-            }
-
             if (!response.ok) {
                 throw new Error(
-                    '배치 목록 조회에 실패했습니다.'
+                    response.status === 403
+                        ? '배치 목록 조회 권한이 없습니다.'
+                        : '배치 목록 조회에 실패했습니다.'
                 )
             }
 
             const data = await response.json()
+            if (controller.signal.aborted) return
 
-            setBatchJobs(data.content)
+            const pages = data.totalPages ?? 0
+            const lastPage = Math.max(0, pages - 1)
+            if (query.page > lastPage) {
+                setQuery((prev) => ({ ...prev, page: lastPage }))
+                return
+            }
 
+            setBatchJobs(data.content ?? [])
+            setTotalPages(pages)
+            setTotalElements(data.totalElements ?? 0)
         } catch (error) {
-
+            if (controller.signal.aborted) return
+            setBatchJobs([])
+            setTotalPages(0)
+            setTotalElements(0)
             setMessage(error.message)
-
         } finally {
-
-            setLoading(false)
+            if (!controller.signal.aborted) setLoading(false)
         }
+    }, [accessToken, onLogout, query])
 
-    }, [accessToken, onLogout])
-
-
-    // 최초 화면 진입 시 목록 조회
     useEffect(() => {
-
         fetchBatchJobs()
-
+        return () => listAbortRef.current?.abort()
     }, [fetchBatchJobs])
 
+    const handleSearch = (event) => {
+        event.preventDefault()
+        setQuery((prev) => ({
+            ...prev,
+            page: 0,
+            keyword: keywordInput.trim(),
+        }))
+    }
+
+    const handlePageChange = (page) => {
+        if (loading || page < 0 || page >= totalPages) return
+        setQuery((prev) => ({ ...prev, page }))
+    }
 
     // =========================================================
     // 2. 신규 등록 Form 열기
@@ -304,7 +327,12 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                     '배치 작업이 등록되었습니다.'
                 )
 
-                await fetchBatchJobs()
+                setKeywordInput('')
+                if (query.page === 0 && query.keyword === '') {
+                    await fetchBatchJobs()
+                } else {
+                    setQuery((prev) => ({ ...prev, page: 0, keyword: '' }))
+                }
 
                 return
             }
@@ -1110,6 +1138,54 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                         배치 목록
                     ================================================== */}
 
+                    <form
+                        onSubmit={handleSearch}
+                        className="flex flex-wrap items-center gap-3 mb-5"
+                    >
+                        <label htmlFor="job-keyword" className="font-medium">배치명</label>
+                        <input
+                            id="job-keyword"
+                            value={keywordInput}
+                            onChange={(event) => setKeywordInput(event.target.value)}
+                            placeholder="배치명 검색"
+                            className="border rounded-lg px-3 py-2 bg-white"
+                        />
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="bg-blue-600 text-white rounded-lg px-4 py-2 disabled:opacity-50"
+                        >
+                            검색
+                        </button>
+                        <button
+                            type="button"
+                            disabled={loading}
+                            onClick={() => {
+                                setKeywordInput('')
+                                setQuery((prev) => ({ ...prev, page: 0, keyword: '' }))
+                            }}
+                            className="border rounded-lg px-4 py-2 bg-white disabled:opacity-50"
+                        >
+                            초기화
+                        </button>
+                        <label htmlFor="job-page-size" className="font-medium">표시 건수</label>
+                        <select
+                            id="job-page-size"
+                            value={query.size}
+                            disabled={loading}
+                            onChange={(event) => setQuery((prev) => ({
+                                ...prev,
+                                page: 0,
+                                size: Number(event.target.value),
+                            }))}
+                            className="border rounded-lg px-3 py-2 bg-white"
+                        >
+                            <option value={10}>10건</option>
+                            <option value={20}>20건</option>
+                            <option value={50}>50건</option>
+                        </select>
+                    </form>
+
                     {loading && (
                         <p>조회 중...</p>
                     )}
@@ -1124,7 +1200,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                     )}
 
 
-                    {!loading && (
+                    {!loading && !message && batchJobs.length > 0 && (
 
                         <div className="bg-white rounded-xl shadow overflow-x-auto">
 
@@ -1318,6 +1394,37 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                     )}
 
 
+                    {!loading && !message && (
+                        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                            <p className="text-gray-600" aria-live="polite">
+                                {totalElements === 0
+                                    ? '조회된 배치 작업이 없습니다.'
+                                    : `총 ${totalElements}건 · ${query.page * query.size + 1}–${query.page * query.size + batchJobs.length}건 표시`}
+                            </p>
+                            {totalPages > 0 && (
+                                <nav aria-label="배치 작업 페이지" className="flex items-center gap-3">
+                                    <button
+                                        type="button"
+                                        disabled={query.page === 0}
+                                        onClick={() => handlePageChange(query.page - 1)}
+                                        className="border rounded-lg bg-white px-4 py-2 disabled:opacity-40"
+                                    >
+                                        이전
+                                    </button>
+                                    <span>{query.page + 1} / {totalPages}</span>
+                                    <button
+                                        type="button"
+                                        disabled={query.page + 1 >= totalPages}
+                                        onClick={() => handlePageChange(query.page + 1)}
+                                        className="border rounded-lg bg-white px-4 py-2 disabled:opacity-40"
+                                    >
+                                        다음
+                                    </button>
+                                </nav>
+                            )}
+                        </div>
+                    )}
+
                     {/* =================================================
                         실행 이력
                     ================================================== */}
@@ -1330,7 +1437,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                         >
 
                             <h2 className="text-2xl font-bold mb-2">
-                                실행 이력
+                                최근 실행 이력 10건
                             </h2>
 
                             <p className="text-gray-600 mb-5">
