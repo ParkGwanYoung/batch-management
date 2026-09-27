@@ -97,5 +97,6 @@ jobs:
           docker image prune -f
 
           docker compose \
-            -f docker-compose.prod.yml \
-            ps
+          --env-file .env.prod \
+          -f docker-compose.prod.yml \
+          ps
