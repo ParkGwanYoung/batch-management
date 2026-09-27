@@ -879,7 +879,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                                 hover:bg-green-500
                             "
                         >
-                            + 배치 등록
+                            + 배치 등록 +
                         </button>
 
                     </div>
