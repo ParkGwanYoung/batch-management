@@ -15,14 +15,6 @@ function DashboardPage({
 
 
     // =========================================================
-    // 배치 목록
-    // - 검색조건 BatchJob 선택용
-    // =========================================================
-
-    const [batchJobs, setBatchJobs] = useState([])
-
-
-    // =========================================================
     // QueryDSL 실행 분석 검색 조건
     // =========================================================
 
@@ -69,15 +61,6 @@ function DashboardPage({
 
 
     // =========================================================
-    // 공통 인증 Header
-    // =========================================================
-
-    const authHeaders = {
-        Authorization: `Bearer ${accessToken}`,
-    }
-
-
-    // =========================================================
     // 1. Dashboard Summary 조회
     // =========================================================
 
@@ -87,7 +70,7 @@ function DashboardPage({
             '/api/dashboard/summary',
             {
                 method: 'GET',
-                headers: authHeaders,
+                headers: { Authorization: `Bearer ${accessToken}` },
             }
         )
 
@@ -117,46 +100,6 @@ function DashboardPage({
 
 
         return response.json()
-
-    }, [accessToken, onLogout])
-
-
-    // =========================================================
-    // 2. BatchJob 목록 조회
-    //
-    // 검색조건 Select에 사용
-    // =========================================================
-
-    const fetchBatchJobs = useCallback(async () => {
-
-        const response = await fetch(
-            '/api/batch-jobs?page=0&size=100',
-            {
-                method: 'GET',
-                headers: authHeaders,
-            }
-        )
-
-
-        if (response.status === 401) {
-
-            onLogout()
-
-            return null
-        }
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                '배치 목록 조회에 실패했습니다.'
-            )
-        }
-
-
-        const data = await response.json()
-
-        return data.content
 
     }, [accessToken, onLogout])
 
@@ -277,7 +220,7 @@ function DashboardPage({
                     `/api/dashboard/executions?${params.toString()}`,
                     {
                         method: 'GET',
-                        headers: authHeaders,
+                        headers: { Authorization: `Bearer ${accessToken}` },
                     }
                 )
 
@@ -354,62 +297,24 @@ function DashboardPage({
     // =========================================================
 
     useEffect(() => {
+        let cancelled = false
 
         const initDashboard = async () => {
-
             setLoading(true)
             setMessage('')
-
-
             try {
-
-                // Summary + BatchJob 목록은 서로 독립적
-                const [
-                    summaryData,
-                    batchJobData,
-                ] = await Promise.all([
-
-                    fetchSummary(),
-                    fetchBatchJobs(),
-
-                ])
-
-
-                if (summaryData) {
-
-                    setSummary(
-                        summaryData
-                    )
-                }
-
-
-                if (batchJobData) {
-
-                    setBatchJobs(
-                        batchJobData
-                    )
-                }
-
-
+                const summaryData = await fetchSummary()
+                if (!cancelled && summaryData) setSummary(summaryData)
             } catch (error) {
-
-                setMessage(
-                    error.message
-                )
-
+                if (!cancelled) setMessage(error.message)
             } finally {
-
-                setLoading(false)
+                if (!cancelled) setLoading(false)
             }
         }
 
-
         initDashboard()
-
-    }, [
-        fetchSummary,
-        fetchBatchJobs,
-    ])
+        return () => { cancelled = true }
+    }, [fetchSummary])
 
 
     // =========================================================
@@ -956,61 +861,16 @@ function DashboardPage({
                                 </div>
 
 
-                                {/* BatchJob */}
-
-                                <div>
-
-                                    <label
-                                        className="
-                                            block
-                                            text-sm
-                                            font-medium
-                                            mb-2
-                                        "
-                                    >
-
-                                        배치 작업
-
-                                    </label>
-
-
-                                    <select
-                                        name="batchJobId"
-                                        value={searchCondition.batchJobId}
-                                        onChange={handleConditionChange}
-                                        className="
-                                            w-full
-                                            border
-                                            rounded-lg
-                                            px-3
-                                            py-2
-                                            bg-white
-                                        "
-                                    >
-
-                                        <option value="">
-                                            전체
-                                        </option>
-
-
-                                        {batchJobs.map(
-                                            (job) => (
-
-                                                <option
-                                                    key={job.id}
-                                                    value={job.id}
-                                                >
-
-                                                    {job.name}
-
-                                                </option>
-
-                                            )
-                                        )}
-
-                                    </select>
-
-                                </div>
+                                {/* 특정 배치 선택: 서버 검색과 페이지 이동 */}
+                                <BatchJobPicker
+                                    accessToken={accessToken}
+                                    onLogout={onLogout}
+                                    value={searchCondition.batchJobId}
+                                    onChange={(batchJobId) => setSearchCondition((prev) => ({
+                                        ...prev,
+                                        batchJobId,
+                                    }))}
+                                />
 
 
                                 {/* 배치명 */}
@@ -1747,5 +1607,193 @@ function SummaryCard({
     )
 }
 
+
+
+function BatchJobPicker({ accessToken, onLogout, value, onChange }) {
+    const [input, setInput] = useState('')
+    const [query, setQuery] = useState({ keyword: '', page: 0 })
+    const [jobs, setJobs] = useState([])
+    const [selectedJob, setSelectedJob] = useState(null)
+    const [totalPages, setTotalPages] = useState(0)
+    const [totalElements, setTotalElements] = useState(0)
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState('')
+
+    useEffect(() => {
+        const controller = new AbortController()
+
+        const loadJobs = async () => {
+            setLoading(true)
+            setError('')
+            try {
+                const params = new URLSearchParams({
+                    page: String(query.page),
+                    size: '20',
+                    sort: 'id,desc',
+                })
+                if (query.keyword) params.set('keyword', query.keyword)
+
+                const response = await fetch('/api/batch-jobs?' + params.toString(), {
+                    headers: { Authorization: `Bearer ${accessToken}` },
+                    signal: controller.signal,
+                })
+
+                if (controller.signal.aborted) return
+                if (response.status === 401) {
+                    onLogout()
+                    return
+                }
+                if (!response.ok) throw new Error('배치 선택 목록을 불러오지 못했습니다.')
+
+                const data = await response.json()
+                if (controller.signal.aborted) return
+
+                const pages = data.totalPages ?? 0
+                const lastPage = Math.max(0, pages - 1)
+                if (query.page > lastPage) {
+                    setQuery((prev) => ({ ...prev, page: lastPage }))
+                    return
+                }
+
+                setJobs(data.content ?? [])
+                setTotalPages(pages)
+                setTotalElements(data.totalElements ?? 0)
+            } catch (e) {
+                if (controller.signal.aborted) return
+                setJobs([])
+                setTotalPages(0)
+                setTotalElements(0)
+                setError(e.message)
+            } finally {
+                if (!controller.signal.aborted) setLoading(false)
+            }
+        }
+
+        loadJobs()
+        return () => controller.abort()
+    }, [accessToken, onLogout, query])
+
+    const searchJobs = () => {
+        setQuery({ keyword: input.trim(), page: 0 })
+    }
+
+    const pinnedSelection = value !== ''
+        && !jobs.some((job) => String(job.id) === String(value))
+
+    const handleSelect = (event) => {
+        const id = event.target.value
+        if (!id) {
+            setSelectedJob(null)
+        } else {
+            const job = jobs.find((item) => String(item.id) === id)
+            if (job) setSelectedJob(job)
+        }
+        onChange(id)
+    }
+
+    return (
+        <div>
+            <label htmlFor="dashboard-job-select" className="block text-sm font-medium mb-2">
+                배치 작업
+            </label>
+            <div className="flex gap-2 mb-2">
+                <input
+                    aria-label="선택할 배치명 찾기"
+                    value={input}
+                    onChange={(event) => setInput(event.target.value)}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                            event.preventDefault()
+                            searchJobs()
+                        }
+                    }}
+                    placeholder="선택할 배치명 찾기"
+                    className="min-w-0 flex-1 border rounded-lg px-3 py-2"
+                />
+                <button
+                    type="button"
+                    onClick={searchJobs}
+                    disabled={loading}
+                    className="border rounded-lg px-3 py-2 disabled:opacity-40"
+                >
+                    찾기
+                </button>
+                <button
+                    type="button"
+                    onClick={() => {
+                        setInput('')
+                        setQuery({ keyword: '', page: 0 })
+                    }}
+                    disabled={loading}
+                    className="border rounded-lg px-3 py-2 disabled:opacity-40"
+                >
+                    전체 목록
+                </button>
+            </div>
+            <select
+                id="dashboard-job-select"
+                name="batchJobId"
+                value={value}
+                onChange={handleSelect}
+                disabled={loading}
+                className="w-full border rounded-lg px-3 py-2 bg-white"
+            >
+                <option value="">전체 배치</option>
+                {pinnedSelection && (
+                    <option value={value}>
+                        {selectedJob && String(selectedJob.id) === String(value)
+                            ? selectedJob.name : '배치 #' + value} (현재 선택)
+                    </option>
+                )}
+                {jobs.map((job) => (
+                    <option key={job.id} value={job.id}>
+                        {job.name} (#{job.id})
+                    </option>
+                ))}
+            </select>
+
+            {error ? (
+                <div className="text-sm text-red-600 mt-2" role="alert">
+                    {error}
+                    <button
+                        type="button"
+                        onClick={() => setQuery((prev) => ({ ...prev }))}
+                        className="ml-2 underline"
+                    >
+                        다시 시도
+                    </button>
+                </div>
+            ) : (
+                <div className="flex flex-wrap items-center justify-between gap-2 mt-2 text-sm">
+                    <span aria-live="polite">
+                        {loading ? '조회 중...' : `검색 결과 ${totalElements}건`}
+                    </span>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            disabled={loading || query.page === 0}
+                            onClick={() => setQuery((prev) => ({ ...prev, page: prev.page - 1 }))}
+                            className="border rounded px-2 py-1 disabled:opacity-40"
+                        >
+                            이전
+                        </button>
+                        <span>{totalPages === 0 ? 0 : query.page + 1} / {totalPages}</span>
+                        <button
+                            type="button"
+                            disabled={loading || query.page + 1 >= totalPages}
+                            onClick={() => setQuery((prev) => ({ ...prev, page: prev.page + 1 }))}
+                            className="border rounded px-2 py-1 disabled:opacity-40"
+                        >
+                            다음
+                        </button>
+                    </div>
+                </div>
+            )}
+            <p className="text-xs text-gray-500 mt-2">
+                배치를 선택한 뒤 실행 분석 검색 버튼을 눌러주세요.
+            </p>
+        </div>
+    )
+}
 
 export default DashboardPage
