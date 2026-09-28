@@ -1,710 +1,303 @@
 import { useCallback, useEffect, useState } from 'react'
 
+const INITIAL_SEARCH_CONDITION = {
+    startDate: '',
+    endDate: '',
+    batchJobName: '',
+    status: '',
+    triggerType: '',
+    minFailCount: '',
+    sortBy: 'id',
+    direction: 'desc',
+    page: 0,
+    size: 10,
+}
 
 function DashboardPage({
                            accessToken,
                            onLogout,
                            onOpenBatchJobs,
                        }) {
-
-    // =========================================================
-    // Dashboard Summary
-    // =========================================================
-
     const [summary, setSummary] = useState(null)
-
-
-    // =========================================================
-    // QueryDSL 실행 분석 검색 조건
-    // =========================================================
-
-    const [searchCondition, setSearchCondition] = useState({
-
-        startDate: '',
-        endDate: '',
-
-        batchJobId: '',
-        batchJobName: '',
-
-        status: '',
-        triggerType: '',
-
-        minFailCount: '',
-
-        sortBy: 'id',
-        direction: 'desc',
-
-        page: 0,
-        size: 10,
-    })
-
-
-    // =========================================================
-    // 실행 분석 결과
-    // =========================================================
+    const [searchCondition, setSearchCondition] = useState(
+        INITIAL_SEARCH_CONDITION
+    )
 
     const [executions, setExecutions] = useState([])
-
     const [totalElements, setTotalElements] = useState(0)
     const [totalPages, setTotalPages] = useState(0)
     const [currentPage, setCurrentPage] = useState(0)
 
-
-    // =========================================================
-    // 화면 상태
-    // =========================================================
-
     const [loading, setLoading] = useState(true)
     const [searchLoading, setSearchLoading] = useState(false)
-
     const [message, setMessage] = useState('')
 
-
-    // =========================================================
-    // 1. Dashboard Summary 조회
-    // =========================================================
-
     const fetchSummary = useCallback(async () => {
-
-        const response = await fetch(
-            '/api/dashboard/summary',
-            {
-                method: 'GET',
-                headers: { Authorization: `Bearer ${accessToken}` },
-            }
-        )
-
+        const response = await fetch('/api/dashboard/summary', {
+            method: 'GET',
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            },
+        })
 
         if (response.status === 401) {
-
             onLogout()
-
             return null
         }
 
-
         if (response.status === 403) {
-
-            throw new Error(
-                '대시보드 조회 권한이 없습니다.'
-            )
+            throw new Error('대시보드 조회 권한이 없습니다.')
         }
-
 
         if (!response.ok) {
-
-            throw new Error(
-                '대시보드 요약 조회에 실패했습니다.'
-            )
+            throw new Error('대시보드 요약 조회에 실패했습니다.')
         }
 
-
         return response.json()
-
     }, [accessToken, onLogout])
-
-
-    // =========================================================
-    // 3. QueryDSL 실행 분석 조회
-    // =========================================================
 
     const fetchExecutions = useCallback(
         async (condition) => {
-
             setSearchLoading(true)
             setMessage('')
 
-
             try {
-
-                // ---------------------------------------------
-                // URL Query Parameter 생성
-                // ---------------------------------------------
-
-                const params =
-                    new URLSearchParams()
-
+                const params = new URLSearchParams()
 
                 if (condition.startDate) {
-
-                    params.append(
-                        'startDate',
-                        condition.startDate
-                    )
+                    params.set('startDate', condition.startDate)
                 }
-
 
                 if (condition.endDate) {
-
-                    params.append(
-                        'endDate',
-                        condition.endDate
-                    )
+                    params.set('endDate', condition.endDate)
                 }
-
-
-                if (condition.batchJobId) {
-
-                    params.append(
-                        'batchJobId',
-                        condition.batchJobId
-                    )
-                }
-
 
                 if (condition.batchJobName.trim()) {
-
-                    params.append(
+                    params.set(
                         'batchJobName',
                         condition.batchJobName.trim()
                     )
                 }
 
-
                 if (condition.status) {
-
-                    params.append(
-                        'status',
-                        condition.status
-                    )
+                    params.set('status', condition.status)
                 }
-
 
                 if (condition.triggerType) {
-
-                    params.append(
-                        'triggerType',
-                        condition.triggerType
-                    )
+                    params.set('triggerType', condition.triggerType)
                 }
-
 
                 if (condition.minFailCount !== '') {
-
-                    params.append(
-                        'minFailCount',
-                        condition.minFailCount
-                    )
+                    params.set('minFailCount', condition.minFailCount)
                 }
 
-
-                params.append(
-                    'sortBy',
-                    condition.sortBy
-                )
-
-
-                params.append(
-                    'direction',
-                    condition.direction
-                )
-
-
-                params.append(
-                    'page',
-                    condition.page
-                )
-
-
-                params.append(
-                    'size',
-                    condition.size
-                )
-
-
-                // ---------------------------------------------
-                // QueryDSL API 호출
-                // ---------------------------------------------
+                params.set('sortBy', condition.sortBy)
+                params.set('direction', condition.direction)
+                params.set('page', String(condition.page))
+                params.set('size', String(condition.size))
 
                 const response = await fetch(
                     `/api/dashboard/executions?${params.toString()}`,
                     {
                         method: 'GET',
-                        headers: { Authorization: `Bearer ${accessToken}` },
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                        },
                     }
                 )
 
-
                 if (response.status === 401) {
-
                     onLogout()
-
                     return
                 }
 
-
                 if (response.status === 403) {
-
-                    throw new Error(
-                        '실행 분석 조회 권한이 없습니다.'
-                    )
+                    throw new Error('실행 분석 조회 권한이 없습니다.')
                 }
 
-
                 if (!response.ok) {
-
                     throw new Error(
                         `실행 분석 조회에 실패했습니다. status=${response.status}`
                     )
                 }
 
+                const data = await response.json()
 
-                const data =
-                    await response.json()
-
-
-                setExecutions(
-                    data.content ?? []
-                )
-
-
-                setTotalElements(
-                    data.totalElements ?? 0
-                )
-
-
-                setTotalPages(
-                    data.totalPages ?? 0
-                )
-
-
-                setCurrentPage(
-                    data.number ?? 0
-                )
-
+                setExecutions(data.content ?? [])
+                setTotalElements(data.totalElements ?? 0)
+                setTotalPages(data.totalPages ?? 0)
+                setCurrentPage(data.number ?? 0)
             } catch (error) {
-
                 setExecutions([])
                 setTotalElements(0)
                 setTotalPages(0)
-
-                setMessage(
-                    error.message
-                )
-
+                setCurrentPage(0)
+                setMessage(error.message)
             } finally {
-
                 setSearchLoading(false)
             }
-
         },
         [accessToken, onLogout]
     )
 
-
-    // =========================================================
-    // 4. 최초 화면 진입
-    // =========================================================
-
     useEffect(() => {
         let cancelled = false
 
-        const initDashboard = async () => {
+        const initializeDashboard = async () => {
             setLoading(true)
             setMessage('')
+
             try {
                 const summaryData = await fetchSummary()
-                if (!cancelled && summaryData) setSummary(summaryData)
+
+                if (!cancelled && summaryData) {
+                    setSummary(summaryData)
+                }
             } catch (error) {
-                if (!cancelled) setMessage(error.message)
+                if (!cancelled) {
+                    setMessage(error.message)
+                }
             } finally {
-                if (!cancelled) setLoading(false)
+                if (!cancelled) {
+                    setLoading(false)
+                }
             }
         }
 
-        initDashboard()
-        return () => { cancelled = true }
+        initializeDashboard()
+
+        return () => {
+            cancelled = true
+        }
     }, [fetchSummary])
 
-
-    // =========================================================
-    // 최초 실행 분석 조회
-    // =========================================================
-
     useEffect(() => {
-
-        fetchExecutions(
-            searchCondition
-        )
-
-        // 최초 1회만 조회
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
-
-
-    // =========================================================
-    // 5. 검색 조건 변경
-    // =========================================================
+        fetchExecutions(INITIAL_SEARCH_CONDITION)
+    }, [fetchExecutions])
 
     const handleConditionChange = (event) => {
+        const { name, value } = event.target
 
-        const {
-            name,
-            value,
-        } = event.target
-
-
-        setSearchCondition(
-            (prev) => ({
-
-                ...prev,
-
-                [name]: value,
-
-            })
-        )
+        setSearchCondition((prev) => ({
+            ...prev,
+            [name]: value,
+        }))
     }
-
-
-    // =========================================================
-    // 6. 검색
-    // =========================================================
 
     const handleSearch = async (event) => {
-
         event.preventDefault()
 
-
-        // 새로운 검색이므로 무조건 0페이지부터
-        const newCondition = {
-
+        const nextCondition = {
             ...searchCondition,
-
             page: 0,
         }
 
-
-        setSearchCondition(
-            newCondition
-        )
-
-
-        await fetchExecutions(
-            newCondition
-        )
+        setSearchCondition(nextCondition)
+        await fetchExecutions(nextCondition)
     }
-
-
-    // =========================================================
-    // 7. 검색조건 초기화
-    // =========================================================
 
     const handleReset = async () => {
-
-        const resetCondition = {
-
-            startDate: '',
-            endDate: '',
-
-            batchJobId: '',
-            batchJobName: '',
-
-            status: '',
-            triggerType: '',
-
-            minFailCount: '',
-
-            sortBy: 'id',
-            direction: 'desc',
-
-            page: 0,
-            size: 10,
-        }
-
-
-        setSearchCondition(
-            resetCondition
-        )
-
-
-        await fetchExecutions(
-            resetCondition
-        )
+        setSearchCondition(INITIAL_SEARCH_CONDITION)
+        await fetchExecutions(INITIAL_SEARCH_CONDITION)
     }
 
-
-    // =========================================================
-    // 8. 페이지 이동
-    // =========================================================
-
     const handlePageChange = async (page) => {
-
-        if (
-            page < 0 ||
-            page >= totalPages
-        ) {
+        if (page < 0 || page >= totalPages || searchLoading) {
             return
         }
 
-
-        const newCondition = {
-
+        const nextCondition = {
             ...searchCondition,
-
             page,
         }
 
-
-        setSearchCondition(
-            newCondition
-        )
-
-
-        await fetchExecutions(
-            newCondition
-        )
+        setSearchCondition(nextCondition)
+        await fetchExecutions(nextCondition)
     }
 
-
-    // =========================================================
-    // 날짜 표시
-    // =========================================================
-
     const formatDateTime = (dateTime) => {
-
         if (!dateTime) {
-
             return '-'
         }
 
-
-        return new Date(
-            dateTime
-        ).toLocaleString()
+        return new Date(dateTime).toLocaleString()
     }
 
-
-    // =========================================================
-    // 상태 Badge
-    // =========================================================
-
     const getStatusClass = (status) => {
-
         switch (status) {
-
             case 'SUCCESS':
-
-                return `
-                    bg-green-100
-                    text-green-700
-                `
-
-
+                return 'bg-green-100 text-green-700'
             case 'FAILED':
-
-                return `
-                    bg-red-100
-                    text-red-700
-                `
-
-
+                return 'bg-red-100 text-red-700'
             case 'RUNNING':
-
-                return `
-                    bg-blue-100
-                    text-blue-700
-                `
-
-
+                return 'bg-blue-100 text-blue-700'
             case 'WAITING':
-
-                return `
-                    bg-yellow-100
-                    text-yellow-700
-                `
-
-
+                return 'bg-yellow-100 text-yellow-700'
             default:
-
-                return `
-                    bg-gray-100
-                    text-gray-700
-                `
+                return 'bg-gray-100 text-gray-700'
         }
     }
 
-
-    // =========================================================
-    // Loading
-    // =========================================================
-
     if (loading) {
-
         return (
-
-            <div
-                className="
-                    min-h-screen
-                    bg-gray-100
-                    flex
-                    items-center
-                    justify-center
-                "
-            >
-
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
                 <p className="text-gray-600">
-
                     대시보드 조회 중...
-
                 </p>
-
             </div>
         )
     }
 
-
-    // =========================================================
-    // 화면
-    // =========================================================
-
     return (
-
         <div className="min-h-screen bg-gray-100">
-
-
-            {/* =================================================
-                Header
-            ================================================== */}
-
-            <header
-                className="
-                    bg-gray-900
-                    text-white
-                    px-8
-                    py-4
-                    flex
-                    justify-between
-                    items-center
-                "
-            >
-
-                <div>
-
-                    <h1 className="text-xl font-bold">
-
-                        Batch Management
-
-                    </h1>
-
-                </div>
-
+            <header className="bg-gray-900 text-white px-8 py-4 flex justify-between items-center">
+                <h1 className="text-xl font-bold">
+                    Batch Management
+                </h1>
 
                 <div className="flex gap-3">
-
-
                     <button
+                        type="button"
                         onClick={onOpenBatchJobs}
-                        className="
-                            bg-blue-600
-                            px-4
-                            py-2
-                            rounded-lg
-                            hover:bg-blue-500
-                        "
+                        className="bg-blue-600 px-4 py-2 rounded-lg hover:bg-blue-500"
                     >
-
                         배치 관리
-
                     </button>
-
 
                     <button
+                        type="button"
                         onClick={onLogout}
-                        className="
-                            bg-gray-700
-                            px-4
-                            py-2
-                            rounded-lg
-                            hover:bg-gray-600
-                        "
+                        className="bg-gray-700 px-4 py-2 rounded-lg hover:bg-gray-600"
                     >
-
                         로그아웃
-
                     </button>
-
                 </div>
-
             </header>
 
-
             <main className="p-8">
-
-
                 <div className="max-w-7xl mx-auto">
-
-
-                    {/* =================================================
-                        Dashboard Title
-                    ================================================== */}
-
                     <div className="mb-8">
-
                         <h2 className="text-3xl font-bold">
-
                             대시보드
-
                         </h2>
 
-
                         <p className="text-gray-500 mt-2">
-
-                            배치 운영 현황 및 실행 이력을 분석합니다.
-
+                            배치 운영 현황과 실행 이력을 확인합니다.
                         </p>
-
                     </div>
 
-
-                    {/* =================================================
-                        Error
-                    ================================================== */}
-
                     {message && (
-
-                        <div
-                            className="
-                                bg-red-50
-                                border
-                                border-red-200
-                                text-red-600
-                                rounded-lg
-                                px-5
-                                py-4
-                                mb-6
-                            "
-                        >
-
+                        <div className="bg-red-50 border border-red-200 text-red-600 rounded-lg px-5 py-4 mb-6">
                             {message}
-
                         </div>
-
                     )}
 
-
-                    {/* =================================================
-                        Summary
-                    ================================================== */}
-
                     {summary && (
-
-                        <div
-                            className="
-                                grid
-                                grid-cols-2
-                                md:grid-cols-3
-                                xl:grid-cols-6
-                                gap-4
-                                mb-10
-                            "
-                        >
-
-
+                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-10">
                             <SummaryCard
                                 title="전체 배치"
                                 value={summary.totalJobCount}
                             />
-
 
                             <SummaryCard
                                 title="활성 배치"
@@ -712,13 +305,11 @@ function DashboardPage({
                                 valueClass="text-green-600"
                             />
 
-
                             <SummaryCard
                                 title="WAITING"
                                 value={summary.waitingExecutionCount}
                                 valueClass="text-yellow-600"
                             />
-
 
                             <SummaryCard
                                 title="RUNNING"
@@ -726,313 +317,93 @@ function DashboardPage({
                                 valueClass="text-blue-600"
                             />
 
-
                             <SummaryCard
                                 title="SUCCESS"
                                 value={summary.successExecutionCount}
                                 valueClass="text-green-600"
                             />
 
-
                             <SummaryCard
                                 title="FAILED"
                                 value={summary.failedExecutionCount}
                                 valueClass="text-red-500"
                             />
-
                         </div>
-
                     )}
 
-
-                    {/* =================================================
-                        실행 분석 검색 Form
-                    ================================================== */}
-
-                    <section
-                        className="
-                            bg-white
-                            rounded-xl
-                            shadow
-                            p-6
-                            mb-8
-                        "
-                    >
-
+                    <section className="bg-white rounded-xl shadow p-6 mb-8">
                         <div className="mb-6">
-
                             <h3 className="text-xl font-bold">
-
                                 실행 분석
-
                             </h3>
 
-
                             <p className="text-sm text-gray-500 mt-1">
-
-                                복합 조건을 조합하여 배치 실행 이력을 조회합니다.
-
+                                필요한 조건만 조합하여 배치 실행 이력을 조회합니다.
                             </p>
-
                         </div>
 
-
                         <form onSubmit={handleSearch}>
-
-
-                            <div
-                                className="
-                                    grid
-                                    grid-cols-1
-                                    md:grid-cols-2
-                                    xl:grid-cols-4
-                                    gap-5
-                                "
-                            >
-
-
-                                {/* 시작일 */}
-
-                                <div>
-
-                                    <label
-                                        className="
-                                            block
-                                            text-sm
-                                            font-medium
-                                            mb-2
-                                        "
-                                    >
-
-                                        시작일
-
-                                    </label>
-
-
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+                                <SearchField label="시작일">
                                     <input
                                         type="date"
                                         name="startDate"
                                         value={searchCondition.startDate}
                                         onChange={handleConditionChange}
-                                        className="
-                                            w-full
-                                            border
-                                            rounded-lg
-                                            px-3
-                                            py-2
-                                        "
+                                        className={inputClass}
                                     />
+                                </SearchField>
 
-                                </div>
-
-
-                                {/* 종료일 */}
-
-                                <div>
-
-                                    <label
-                                        className="
-                                            block
-                                            text-sm
-                                            font-medium
-                                            mb-2
-                                        "
-                                    >
-
-                                        종료일
-
-                                    </label>
-
-
+                                <SearchField label="종료일">
                                     <input
                                         type="date"
                                         name="endDate"
                                         value={searchCondition.endDate}
                                         onChange={handleConditionChange}
-                                        className="
-                                            w-full
-                                            border
-                                            rounded-lg
-                                            px-3
-                                            py-2
-                                        "
+                                        className={inputClass}
                                     />
+                                </SearchField>
 
-                                </div>
-
-
-                                {/* 특정 배치 선택: 서버 검색과 페이지 이동 */}
-                                <BatchJobPicker
-                                    accessToken={accessToken}
-                                    onLogout={onLogout}
-                                    value={searchCondition.batchJobId}
-                                    onChange={(batchJobId) => setSearchCondition((prev) => ({
-                                        ...prev,
-                                        batchJobId,
-                                    }))}
-                                />
-
-
-                                {/* 배치명 */}
-
-                                <div>
-
-                                    <label
-                                        className="
-                                            block
-                                            text-sm
-                                            font-medium
-                                            mb-2
-                                        "
-                                    >
-
-                                        배치명 검색
-
-                                    </label>
-
-
+                                <SearchField label="배치명">
                                     <input
                                         type="text"
                                         name="batchJobName"
                                         value={searchCondition.batchJobName}
                                         onChange={handleConditionChange}
                                         placeholder="예: 회원"
-                                        className="
-                                            w-full
-                                            border
-                                            rounded-lg
-                                            px-3
-                                            py-2
-                                        "
+                                        className={inputClass}
                                     />
+                                </SearchField>
 
-                                </div>
-
-
-                                {/* Status */}
-
-                                <div>
-
-                                    <label
-                                        className="
-                                            block
-                                            text-sm
-                                            font-medium
-                                            mb-2
-                                        "
-                                    >
-
-                                        실행 상태
-
-                                    </label>
-
-
+                                <SearchField label="실행 상태">
                                     <select
                                         name="status"
                                         value={searchCondition.status}
                                         onChange={handleConditionChange}
-                                        className="
-                                            w-full
-                                            border
-                                            rounded-lg
-                                            px-3
-                                            py-2
-                                            bg-white
-                                        "
+                                        className={inputClass}
                                     >
-
-                                        <option value="">
-                                            전체
-                                        </option>
-
-                                        <option value="WAITING">
-                                            WAITING
-                                        </option>
-
-                                        <option value="RUNNING">
-                                            RUNNING
-                                        </option>
-
-                                        <option value="SUCCESS">
-                                            SUCCESS
-                                        </option>
-
-                                        <option value="FAILED">
-                                            FAILED
-                                        </option>
-
+                                        <option value="">전체</option>
+                                        <option value="WAITING">WAITING</option>
+                                        <option value="RUNNING">RUNNING</option>
+                                        <option value="SUCCESS">SUCCESS</option>
+                                        <option value="FAILED">FAILED</option>
                                     </select>
+                                </SearchField>
 
-                                </div>
-
-
-                                {/* Trigger */}
-
-                                <div>
-
-                                    <label
-                                        className="
-                                            block
-                                            text-sm
-                                            font-medium
-                                            mb-2
-                                        "
-                                    >
-
-                                        실행 방식
-
-                                    </label>
-
-
+                                <SearchField label="실행 방식">
                                     <select
                                         name="triggerType"
                                         value={searchCondition.triggerType}
                                         onChange={handleConditionChange}
-                                        className="
-                                            w-full
-                                            border
-                                            rounded-lg
-                                            px-3
-                                            py-2
-                                            bg-white
-                                        "
+                                        className={inputClass}
                                     >
-
-                                        <option value="">
-                                            전체
-                                        </option>
-
-                                        <option value="MANUAL">
-                                            MANUAL
-                                        </option>
-
-                                        <option value="AUTO">
-                                            AUTO
-                                        </option>
-
+                                        <option value="">전체</option>
+                                        <option value="MANUAL">MANUAL</option>
+                                        <option value="SCHEDULE">SCHEDULE</option>
                                     </select>
+                                </SearchField>
 
-                                </div>
-
-
-                                {/* 최소 실패 */}
-
-                                <div>
-
-                                    <label
-                                        className="
-                                            block
-                                            text-sm
-                                            font-medium
-                                            mb-2
-                                        "
-                                    >
-
-                                        최소 실패 건수
-
-                                    </label>
-
-
+                                <SearchField label="최소 실패 건수">
                                     <input
                                         type="number"
                                         min="0"
@@ -1040,757 +411,246 @@ function DashboardPage({
                                         value={searchCondition.minFailCount}
                                         onChange={handleConditionChange}
                                         placeholder="예: 1"
-                                        className="
-                                            w-full
-                                            border
-                                            rounded-lg
-                                            px-3
-                                            py-2
-                                        "
+                                        className={inputClass}
                                     />
+                                </SearchField>
 
-                                </div>
-
-
-                                {/* 정렬 */}
-
-                                <div>
-
-                                    <label
-                                        className="
-                                            block
-                                            text-sm
-                                            font-medium
-                                            mb-2
-                                        "
-                                    >
-
-                                        정렬
-
-                                    </label>
-
-
+                                <SearchField label="정렬 기준">
                                     <select
                                         name="sortBy"
                                         value={searchCondition.sortBy}
                                         onChange={handleConditionChange}
-                                        className="
-                                            w-full
-                                            border
-                                            rounded-lg
-                                            px-3
-                                            py-2
-                                            bg-white
-                                        "
+                                        className={inputClass}
                                     >
-
-                                        <option value="id">
-                                            실행 ID
-                                        </option>
-
-                                        <option value="startTime">
-                                            시작 시간
-                                        </option>
-
-                                        <option value="failCount">
-                                            실패 건수
-                                        </option>
-
-                                        <option value="successCount">
-                                            성공 건수
-                                        </option>
-
+                                        <option value="id">실행 ID</option>
+                                        <option value="startTime">시작 시간</option>
+                                        <option value="failCount">실패 건수</option>
+                                        <option value="successCount">성공 건수</option>
                                     </select>
+                                </SearchField>
 
-                                </div>
-
-                            </div>
-
-
-                            {/* 정렬 방향 */}
-
-                            <div
-                                className="
-                                    flex
-                                    flex-wrap
-                                    justify-between
-                                    items-end
-                                    gap-4
-                                    mt-6
-                                "
-                            >
-
-                                <div>
-
-                                    <label
-                                        className="
-                                            block
-                                            text-sm
-                                            font-medium
-                                            mb-2
-                                        "
-                                    >
-
-                                        정렬 방향
-
-                                    </label>
-
-
+                                <SearchField label="정렬 방향">
                                     <select
                                         name="direction"
                                         value={searchCondition.direction}
                                         onChange={handleConditionChange}
-                                        className="
-                                            border
-                                            rounded-lg
-                                            px-4
-                                            py-2
-                                            bg-white
-                                        "
+                                        className={inputClass}
                                     >
-
-                                        <option value="desc">
-                                            내림차순
-                                        </option>
-
-                                        <option value="asc">
-                                            오름차순
-                                        </option>
-
+                                        <option value="desc">내림차순</option>
+                                        <option value="asc">오름차순</option>
                                     </select>
-
-                                </div>
-
-
-                                <div className="flex gap-3">
-
-                                    <button
-                                        type="button"
-                                        onClick={handleReset}
-                                        className="
-                                            bg-gray-500
-                                            text-white
-                                            px-5
-                                            py-2
-                                            rounded-lg
-                                            hover:bg-gray-400
-                                        "
-                                    >
-
-                                        초기화
-
-                                    </button>
-
-
-                                    <button
-                                        type="submit"
-                                        disabled={searchLoading}
-                                        className="
-                                            bg-blue-600
-                                            text-white
-                                            px-6
-                                            py-2
-                                            rounded-lg
-                                            hover:bg-blue-500
-                                            disabled:bg-gray-400
-                                        "
-                                    >
-
-                                        {searchLoading
-                                            ? '조회 중...'
-                                            : '검색'}
-
-                                    </button>
-
-                                </div>
-
+                                </SearchField>
                             </div>
 
-                        </form>
+                            <div className="flex justify-end gap-3 mt-6">
+                                <button
+                                    type="button"
+                                    onClick={handleReset}
+                                    disabled={searchLoading}
+                                    className="bg-gray-500 text-white px-5 py-2 rounded-lg hover:bg-gray-400 disabled:bg-gray-300"
+                                >
+                                    초기화
+                                </button>
 
+                                <button
+                                    type="submit"
+                                    disabled={searchLoading}
+                                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-500 disabled:bg-gray-400"
+                                >
+                                    {searchLoading
+                                        ? '조회 중...'
+                                        : '검색'}
+                                </button>
+                            </div>
+                        </form>
                     </section>
 
-
-                    {/* =================================================
-                        검색 결과
-                    ================================================== */}
-
                     <section>
-
-                        <div
-                            className="
-                                flex
-                                justify-between
-                                items-center
-                                mb-4
-                            "
-                        >
-
+                        <div className="flex justify-between items-end mb-4">
                             <div>
-
                                 <h3 className="text-xl font-bold">
-
-                                    검색 결과
-
+                                    실행 이력
                                 </h3>
 
-
-                                <p
-                                    className="
-                                        text-sm
-                                        text-gray-500
-                                        mt-1
-                                    "
-                                >
-
+                                <p className="text-sm text-gray-500 mt-1">
                                     총 {totalElements}건
-
                                 </p>
-
                             </div>
-
                         </div>
 
-
-                        <div
-                            className="
-                                bg-white
-                                rounded-xl
-                                shadow
-                                overflow-x-auto
-                            "
-                        >
-
+                        <div className="bg-white rounded-xl shadow overflow-x-auto">
                             <table className="w-full min-w-[1100px]">
-
                                 <thead className="bg-gray-200">
-
                                 <tr>
-
                                     <th className="text-left px-5 py-4">
                                         ID
                                     </th>
-
                                     <th className="text-left px-5 py-4">
                                         배치명
                                     </th>
-
                                     <th className="text-left px-5 py-4">
                                         상태
                                     </th>
-
                                     <th className="text-left px-5 py-4">
                                         방식
                                     </th>
-
                                     <th className="text-left px-5 py-4">
                                         시작 시간
                                     </th>
-
                                     <th className="text-left px-5 py-4">
                                         종료 시간
                                     </th>
-
                                     <th className="text-left px-5 py-4">
                                         성공
                                     </th>
-
                                     <th className="text-left px-5 py-4">
                                         실패
                                     </th>
-
                                 </tr>
-
                                 </thead>
 
-
                                 <tbody>
-
                                 {searchLoading ? (
-
                                     <tr>
-
                                         <td
                                             colSpan="8"
-                                            className="
-                                                    text-center
-                                                    py-10
-                                                    text-gray-500
-                                                "
+                                            className="text-center py-10 text-gray-500"
                                         >
-
                                             조회 중...
-
                                         </td>
-
                                     </tr>
-
                                 ) : executions.length === 0 ? (
-
                                     <tr>
-
                                         <td
                                             colSpan="8"
-                                            className="
-                                                    text-center
-                                                    py-10
-                                                    text-gray-500
-                                                "
+                                            className="text-center py-10 text-gray-500"
                                         >
-
                                             조건에 맞는 실행 이력이 없습니다.
-
                                         </td>
-
                                     </tr>
-
                                 ) : (
+                                    executions.map((execution) => (
+                                        <tr
+                                            key={execution.id}
+                                            className="border-t hover:bg-gray-50"
+                                        >
+                                            <td className="px-5 py-4">
+                                                {execution.id}
+                                            </td>
 
-                                    executions.map(
-                                        (execution) => (
+                                            <td className="px-5 py-4 font-medium">
+                                                {execution.batchJobName}
+                                            </td>
 
-                                            <tr
-                                                key={execution.id}
-                                                className="
-                                                        border-t
-                                                        hover:bg-gray-50
-                                                    "
-                                            >
+                                            <td className="px-5 py-4">
+                                                    <span
+                                                        className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusClass(
+                                                            execution.status
+                                                        )}`}
+                                                    >
+                                                        {execution.status}
+                                                    </span>
+                                            </td>
 
-                                                <td className="px-5 py-4">
+                                            <td className="px-5 py-4">
+                                                {execution.triggerType}
+                                            </td>
 
-                                                    {execution.id}
+                                            <td className="px-5 py-4 whitespace-nowrap">
+                                                {formatDateTime(
+                                                    execution.startTime
+                                                )}
+                                            </td>
 
-                                                </td>
+                                            <td className="px-5 py-4 whitespace-nowrap">
+                                                {formatDateTime(
+                                                    execution.endTime
+                                                )}
+                                            </td>
 
+                                            <td className="px-5 py-4 text-green-600 font-medium">
+                                                {execution.successCount ?? '-'}
+                                            </td>
 
-                                                <td
-                                                    className="
-                                                            px-5
-                                                            py-4
-                                                            font-medium
-                                                        "
-                                                >
-
-                                                    {execution.batchJobName}
-
-                                                </td>
-
-
-                                                <td className="px-5 py-4">
-
-                                                        <span
-                                                            className={`
-                                                                px-3
-                                                                py-1
-                                                                rounded-full
-                                                                text-sm
-                                                                font-medium
-                                                                ${getStatusClass(
-                                                                execution.status
-                                                            )}
-                                                            `}
-                                                        >
-
-                                                            {execution.status}
-
-                                                        </span>
-
-                                                </td>
-
-
-                                                <td className="px-5 py-4">
-
-                                                    {execution.triggerType}
-
-                                                </td>
-
-
-                                                <td className="px-5 py-4">
-
-                                                    {formatDateTime(
-                                                        execution.startTime
-                                                    )}
-
-                                                </td>
-
-
-                                                <td className="px-5 py-4">
-
-                                                    {formatDateTime(
-                                                        execution.endTime
-                                                    )}
-
-                                                </td>
-
-
-                                                <td
-                                                    className="
-                                                            px-5
-                                                            py-4
-                                                            text-green-600
-                                                            font-medium
-                                                        "
-                                                >
-
-                                                    {
-                                                        execution
-                                                            .successCount
-                                                        ?? '-'
-                                                    }
-
-                                                </td>
-
-
-                                                <td
-                                                    className="
-                                                            px-5
-                                                            py-4
-                                                            text-red-500
-                                                            font-medium
-                                                        "
-                                                >
-
-                                                    {
-                                                        execution
-                                                            .failCount
-                                                        ?? '-'
-                                                    }
-
-                                                </td>
-
-                                            </tr>
-
-                                        )
-                                    )
-
+                                            <td className="px-5 py-4 text-red-500 font-medium">
+                                                {execution.failCount ?? '-'}
+                                            </td>
+                                        </tr>
+                                    ))
                                 )}
-
                                 </tbody>
-
                             </table>
-
                         </div>
 
-
-                        {/* =================================================
-                            Pagination
-                        ================================================== */}
-
                         {totalPages > 0 && (
-
-                            <div
-                                className="
-                                    flex
-                                    justify-center
-                                    items-center
-                                    gap-4
-                                    mt-6
-                                "
-                            >
-
+                            <div className="flex justify-center items-center gap-4 mt-6">
                                 <button
+                                    type="button"
                                     onClick={() =>
-                                        handlePageChange(
-                                            currentPage - 1
-                                        )
-                                    }
-                                    disabled={currentPage === 0}
-                                    className="
-                                        border
-                                        bg-white
-                                        px-4
-                                        py-2
-                                        rounded-lg
-                                        disabled:text-gray-300
-                                        disabled:cursor-not-allowed
-                                    "
-                                >
-
-                                    이전
-
-                                </button>
-
-
-                                <span className="font-medium">
-
-                                    {currentPage + 1}
-                                    {' / '}
-                                    {totalPages}
-
-                                </span>
-
-
-                                <button
-                                    onClick={() =>
-                                        handlePageChange(
-                                            currentPage + 1
-                                        )
+                                        handlePageChange(currentPage - 1)
                                     }
                                     disabled={
-                                        currentPage + 1
-                                        >= totalPages
+                                        searchLoading ||
+                                        currentPage === 0
                                     }
-                                    className="
-                                        border
-                                        bg-white
-                                        px-4
-                                        py-2
-                                        rounded-lg
-                                        disabled:text-gray-300
-                                        disabled:cursor-not-allowed
-                                    "
+                                    className="border bg-white px-4 py-2 rounded-lg disabled:text-gray-300 disabled:cursor-not-allowed"
                                 >
-
-                                    다음
-
+                                    이전
                                 </button>
 
+                                <span className="font-medium">
+                                    {currentPage + 1} / {totalPages}
+                                </span>
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        handlePageChange(currentPage + 1)
+                                    }
+                                    disabled={
+                                        searchLoading ||
+                                        currentPage + 1 >= totalPages
+                                    }
+                                    className="border bg-white px-4 py-2 rounded-lg disabled:text-gray-300 disabled:cursor-not-allowed"
+                                >
+                                    다음
+                                </button>
                             </div>
-
                         )}
-
                     </section>
-
                 </div>
-
             </main>
-
         </div>
     )
 }
 
+const inputClass =
+    'w-full border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'
 
-// =============================================================
-// Summary Card
-// =============================================================
+function SearchField({ label, children }) {
+    return (
+        <div>
+            <label className="block text-sm font-medium mb-2">
+                {label}
+            </label>
+            {children}
+        </div>
+    )
+}
 
 function SummaryCard({
                          title,
                          value,
                          valueClass = '',
                      }) {
-
     return (
-
-        <div
-            className="
-                bg-white
-                rounded-xl
-                shadow
-                p-5
-            "
-        >
-
+        <div className="bg-white rounded-xl shadow p-5">
             <p className="text-sm text-gray-500">
-
                 {title}
-
             </p>
 
-
-            <p
-                className={`
-                    text-3xl
-                    font-bold
-                    mt-2
-                    ${valueClass}
-                `}
-            >
-
+            <p className={`text-3xl font-bold mt-2 ${valueClass}`}>
                 {value ?? 0}
-
-            </p>
-
-        </div>
-
-    )
-}
-
-
-
-function BatchJobPicker({ accessToken, onLogout, value, onChange }) {
-    const [input, setInput] = useState('')
-    const [query, setQuery] = useState({ keyword: '', page: 0 })
-    const [jobs, setJobs] = useState([])
-    const [selectedJob, setSelectedJob] = useState(null)
-    const [totalPages, setTotalPages] = useState(0)
-    const [totalElements, setTotalElements] = useState(0)
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState('')
-
-    useEffect(() => {
-        const controller = new AbortController()
-
-        const loadJobs = async () => {
-            setLoading(true)
-            setError('')
-            try {
-                const params = new URLSearchParams({
-                    page: String(query.page),
-                    size: '20',
-                    sort: 'id,desc',
-                })
-                if (query.keyword) params.set('keyword', query.keyword)
-
-                const response = await fetch('/api/batch-jobs?' + params.toString(), {
-                    headers: { Authorization: `Bearer ${accessToken}` },
-                    signal: controller.signal,
-                })
-
-                if (controller.signal.aborted) return
-                if (response.status === 401) {
-                    onLogout()
-                    return
-                }
-                if (!response.ok) throw new Error('배치 선택 목록을 불러오지 못했습니다.')
-
-                const data = await response.json()
-                if (controller.signal.aborted) return
-
-                const pages = data.totalPages ?? 0
-                const lastPage = Math.max(0, pages - 1)
-                if (query.page > lastPage) {
-                    setQuery((prev) => ({ ...prev, page: lastPage }))
-                    return
-                }
-
-                setJobs(data.content ?? [])
-                setTotalPages(pages)
-                setTotalElements(data.totalElements ?? 0)
-            } catch (e) {
-                if (controller.signal.aborted) return
-                setJobs([])
-                setTotalPages(0)
-                setTotalElements(0)
-                setError(e.message)
-            } finally {
-                if (!controller.signal.aborted) setLoading(false)
-            }
-        }
-
-        loadJobs()
-        return () => controller.abort()
-    }, [accessToken, onLogout, query])
-
-    const searchJobs = () => {
-        setQuery({ keyword: input.trim(), page: 0 })
-    }
-
-    const pinnedSelection = value !== ''
-        && !jobs.some((job) => String(job.id) === String(value))
-
-    const handleSelect = (event) => {
-        const id = event.target.value
-        if (!id) {
-            setSelectedJob(null)
-        } else {
-            const job = jobs.find((item) => String(item.id) === id)
-            if (job) setSelectedJob(job)
-        }
-        onChange(id)
-    }
-
-    return (
-        <div>
-            <label htmlFor="dashboard-job-select" className="block text-sm font-medium mb-2">
-                배치 작업
-            </label>
-            <div className="flex gap-2 mb-2">
-                <input
-                    aria-label="선택할 배치명 찾기"
-                    value={input}
-                    onChange={(event) => setInput(event.target.value)}
-                    onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
-                            event.preventDefault()
-                            searchJobs()
-                        }
-                    }}
-                    placeholder="선택할 배치명 찾기"
-                    className="min-w-0 flex-1 border rounded-lg px-3 py-2"
-                />
-                <button
-                    type="button"
-                    onClick={searchJobs}
-                    disabled={loading}
-                    className="border rounded-lg px-3 py-2 disabled:opacity-40"
-                >
-                    찾기
-                </button>
-                <button
-                    type="button"
-                    onClick={() => {
-                        setInput('')
-                        setQuery({ keyword: '', page: 0 })
-                    }}
-                    disabled={loading}
-                    className="border rounded-lg px-3 py-2 disabled:opacity-40"
-                >
-                    전체 목록
-                </button>
-            </div>
-            <select
-                id="dashboard-job-select"
-                name="batchJobId"
-                value={value}
-                onChange={handleSelect}
-                disabled={loading}
-                className="w-full border rounded-lg px-3 py-2 bg-white"
-            >
-                <option value="">전체 배치</option>
-                {pinnedSelection && (
-                    <option value={value}>
-                        {selectedJob && String(selectedJob.id) === String(value)
-                            ? selectedJob.name : '배치 #' + value} (현재 선택)
-                    </option>
-                )}
-                {jobs.map((job) => (
-                    <option key={job.id} value={job.id}>
-                        {job.name} (#{job.id})
-                    </option>
-                ))}
-            </select>
-
-            {error ? (
-                <div className="text-sm text-red-600 mt-2" role="alert">
-                    {error}
-                    <button
-                        type="button"
-                        onClick={() => setQuery((prev) => ({ ...prev }))}
-                        className="ml-2 underline"
-                    >
-                        다시 시도
-                    </button>
-                </div>
-            ) : (
-                <div className="flex flex-wrap items-center justify-between gap-2 mt-2 text-sm">
-                    <span aria-live="polite">
-                        {loading ? '조회 중...' : `검색 결과 ${totalElements}건`}
-                    </span>
-                    <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            disabled={loading || query.page === 0}
-                            onClick={() => setQuery((prev) => ({ ...prev, page: prev.page - 1 }))}
-                            className="border rounded px-2 py-1 disabled:opacity-40"
-                        >
-                            이전
-                        </button>
-                        <span>{totalPages === 0 ? 0 : query.page + 1} / {totalPages}</span>
-                        <button
-                            type="button"
-                            disabled={loading || query.page + 1 >= totalPages}
-                            onClick={() => setQuery((prev) => ({ ...prev, page: prev.page + 1 }))}
-                            className="border rounded px-2 py-1 disabled:opacity-40"
-                        >
-                            다음
-                        </button>
-                    </div>
-                </div>
-            )}
-            <p className="text-xs text-gray-500 mt-2">
-                배치를 선택한 뒤 실행 분석 검색 버튼을 눌러주세요.
             </p>
         </div>
     )
