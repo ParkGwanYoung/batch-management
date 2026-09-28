@@ -38,3 +38,10 @@ app:
     page-size: 100
     retry-limit: 3
     skip-limit: 5
+
+  scheduler:
+    enabled: ${APP_SCHEDULER_ENABLED:false}
+    zone: Asia/Seoul
+    poll-delay-ms: 1000
+    initial-delay-ms: 10000
+

@@ -1,178 +1,141 @@
 package com.batchmanager.batch.scheduler;
 
-import com.batchmanager.batch.domain.BatchExecution;
 import com.batchmanager.batch.domain.BatchJob;
-import com.batchmanager.batch.repository.BatchExecutionRepository;
 import com.batchmanager.batch.repository.BatchJobRepository;
 import com.batchmanager.batch.service.BatchExecutionService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
+@ConditionalOnProperty(
+        prefix = "app.scheduler",
+        name = "enabled",
+        havingValue = "true",
+        matchIfMissing = false
+)
 public class BatchScheduler {
 
     private final BatchJobRepository batchJobRepository;
-    private final BatchExecutionRepository batchExecutionRepository;
     private final BatchExecutionService batchExecutionService;
+    private final Clock clock;
+    private final Map<Long, ScheduleState> schedules = new HashMap<>();
 
-//    @Scheduled(fixedDelay = 1000)
-    public void schedule() {
-
-        List<BatchJob> batchJobs =
-                batchJobRepository.findByIsActiveTrue();
-
-        LocalDateTime now = LocalDateTime.now();
-
-        for (BatchJob batchJob : batchJobs) {
-
-            if (isScheduledTime(batchJob, now)) {
-                executeBatch(batchJob);
-            }
-        }
-    }
-
-    private boolean isScheduledTime(
-            BatchJob batchJob,
-            LocalDateTime now
+    @Autowired
+    public BatchScheduler(
+            BatchJobRepository batchJobRepository,
+            BatchExecutionService batchExecutionService,
+            @Value("${app.scheduler.zone:Asia/Seoul}") String zone
     ) {
-
-        CronExpression cronExpression;
-
-        try {
-            cronExpression =
-                    CronExpression.parse(
-                            batchJob.getCronExpression()
-                    );
-
-        } catch (IllegalArgumentException e) {
-
-            log.warn(
-                    "잘못된 Cron 표현식입니다. batchJobId={}, cron={}",
-                    batchJob.getId(),
-                    batchJob.getCronExpression()
-            );
-
-            return false;
-        }
-
-        /*
-         * 현재 초를 기준으로 바로 이전 시점부터
-         * 다음 Cron 실행 시각을 계산한다.
-         *
-         * 예:
-         * 현재 10:00:01
-         * Cron = 0 * * * * *
-         * → 다음 실행 시각 = 10:01:00
-         *
-         * 현재 10:00:00
-         * → 다음 실행 시각 = 10:00:00
-         */
-        LocalDateTime baseTime =
-                now.withNano(0)
-                        .minusSeconds(1);
-
-        LocalDateTime scheduledTime =
-                cronExpression.next(baseTime);
-
-        if (scheduledTime == null) {
-
-            log.warn(
-                    "다음 Cron 실행 시각을 계산할 수 없습니다. "
-                            + "batchJobId={}, cron={}",
-                    batchJob.getId(),
-                    batchJob.getCronExpression()
-            );
-
-            return false;
-        }
-
-        if (scheduledTime.isAfter(now)) {
-            return false;
-        }
-
-        Optional<BatchExecution> lastExecution =
-                batchExecutionRepository
-                        .findTopByBatchJobIdAndTriggerTypeOrderByStartTimeDesc(
-                                batchJob.getId(),
-                                "SCHEDULE"
-                        );
-
-        /*
-         * 이미 이번 Cron 시점에 실행했다면
-         * 다시 실행하지 않는다.
-         */
-        if (lastExecution.isPresent()) {
-
-            LocalDateTime lastExecutionTime =
-                    lastExecution.get().getStartTime();
-
-            if (lastExecutionTime != null
-                    && !lastExecutionTime.isBefore(scheduledTime)) {
-
-                log.debug(
-                        "이미 처리된 스케줄입니다. "
-                                + "batchJobId={}, scheduledTime={}, lastExecutionTime={}",
-                        batchJob.getId(),
-                        scheduledTime,
-                        lastExecutionTime
-                );
-
-                return false;
-            }
-        }
-
-        return true;
+        this(
+                batchJobRepository,
+                batchExecutionService,
+                Clock.system(ZoneId.of(zone))
+        );
     }
 
-    private void executeBatch(BatchJob batchJob) {
+    // 테스트에서 실제 대기 없이 시간을 이동시킬 수 있도록 Clock을 주입한다.
+    BatchScheduler(
+            BatchJobRepository batchJobRepository,
+            BatchExecutionService batchExecutionService,
+            Clock clock
+    ) {
+        this.batchJobRepository = batchJobRepository;
+        this.batchExecutionService = batchExecutionService;
+        this.clock = clock;
+    }
+
+    @Scheduled(
+            fixedDelayString = "${app.scheduler.poll-delay-ms:1000}",
+            initialDelayString = "${app.scheduler.initial-delay-ms:10000}"
+    )
+    public synchronized void schedule() {
+        List<BatchJob> activeJobs = batchJobRepository.findByIsActiveTrue();
+        Set<Long> activeIds = activeJobs.stream()
+                .map(BatchJob::getId)
+                .collect(Collectors.toSet());
+
+        schedules.keySet().removeIf(id -> !activeIds.contains(id));
+
+        for (BatchJob job : activeJobs) {
+            try {
+                checkAndExecute(job);
+            } catch (Exception e) {
+                log.error("스케줄 확인 실패. batchJobId={}", job.getId(), e);
+            }
+        }
+    }
+
+    private void checkAndExecute(BatchJob job) {
+        ZonedDateTime now = ZonedDateTime.now(clock);
+        ScheduleState state = schedules.get(job.getId());
+
+        if (state == null
+                || !state.expression().equals(job.getCronExpression())) {
+            CronExpression cron = CronExpression.parse(job.getCronExpression());
+            state = new ScheduleState(job.getCronExpression(), cron, cron.next(now));
+            schedules.put(job.getId(), state);
+
+            log.info(
+                    "예약 일정 반영. batchJobId={}, cron={}, nextRun={}",
+                    job.getId(), state.expression(), state.nextRun()
+            );
+        }
+
+        if (state.nextRun() == null || now.isBefore(state.nextRun())) {
+            return;
+        }
 
         try {
-
             log.info(
-                    "스케줄 배치 실행 시작. "
-                            + "batchJobId={}, name={}, cron={}",
-                    batchJob.getId(),
-                    batchJob.getName(),
-                    batchJob.getCronExpression()
+                    "예약 실행 요청. batchJobId={}, scheduledAt={}, requestedAt={}",
+                    job.getId(), state.nextRun(), now
             );
 
-            batchExecutionService.executeScheduled(batchJob);
+            // DB에서 활성 여부, Cron 변경, 중복 실행을 다시 확인한다.
+            batchExecutionService.executeScheduled(job);
 
-            log.info(
-                    "스케줄 배치 실행 요청 완료. "
-                            + "batchJobId={}, name={}",
-                    batchJob.getId(),
-                    batchJob.getName()
-            );
+            // SUCCESS 여부는 실행 이력에 기록된다.
+            log.info("예약 실행 처리 종료. batchJobId={}", job.getId());
 
         } catch (IllegalStateException e) {
-
             log.info(
-                    "스케줄 실행 건너뜀. "
-                            + "batchJobId={}, name={}, reason={}",
-                    batchJob.getId(),
-                    batchJob.getName(),
-                    e.getMessage()
+                    "예약 실행 건너뜀. batchJobId={}, reason={}",
+                    job.getId(), e.getMessage()
             );
-
-        } catch (Exception e) {
-
-            log.error(
-                    "스케줄 배치 실행 중 예상하지 못한 오류 발생. "
-                            + "batchJobId={}, name={}",
-                    batchJob.getId(),
-                    batchJob.getName(),
-                    e
+        } finally {
+            // 지연된 예약은 한 번 처리하고, 완료 시각 이후의 다음 예약으로 이동한다.
+            // 지나간 모든 Cron 시각을 연속 재실행하지 않는다.
+            schedules.put(
+                    job.getId(),
+                    new ScheduleState(
+                            state.expression(),
+                            state.cron(),
+                            state.cron().next(ZonedDateTime.now(clock))
+                    )
             );
         }
     }
+
+    private record ScheduleState(
+            String expression,
+            CronExpression cron,
+            ZonedDateTime nextRun
+    ) {
+    }
 }
+

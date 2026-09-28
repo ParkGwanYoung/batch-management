@@ -89,11 +89,13 @@ public class BatchExecutionService {
     }
 
     public BatchExecutionDetailResponse execute(Long executionId) {
+        BatchExecution execution = batchExecutionStartService.start(executionId);
+        return executeStarted(execution);
+    }
 
-        // 실행 거절은 아래 try 바깥에서 처리한다.
-        // 따라서 중복 요청이 기존 이력을 FAILED로 바꾸지 않는다.
-        BatchExecution execution =
-                batchExecutionStartService.start(executionId);
+    // 시작 상태 커밋 이후 실행한다. 배치 전체를 하나의 트랜잭션으로 감싸지 않는다.
+    private BatchExecutionDetailResponse executeStarted(BatchExecution execution) {
+        Long executionId = execution.getId();
 
         try {
             JobParameters jobParameters = new JobParametersBuilder()
@@ -207,15 +209,11 @@ public class BatchExecutionService {
     }
 
     public void executeScheduled(BatchJob targetJob) {
-        validateActive(targetJob);
-
-        BatchExecution execution =
-                createWaitingExecution(targetJob, "SCHEDULE");
-
-        BatchExecution savedExecution =
-                batchExecutionRepository.save(execution);
-
-        execute(savedExecution.getId());
+        BatchExecution execution = batchExecutionStartService.startScheduled(
+                targetJob.getId(),
+                targetJob.getCronExpression()
+        );
+        executeStarted(execution);
     }
 
     private BatchExecution createWaitingExecution(
