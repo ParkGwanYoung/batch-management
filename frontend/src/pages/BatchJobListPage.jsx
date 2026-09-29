@@ -817,7 +817,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
 
     return (
 
-        <div className="min-h-screen bg-gray-100">
+        <div className="min-h-screen bg-slate-50">
 
             {/* =====================================================
                 Header
@@ -825,8 +825,10 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
 
             <header
                 className="
-                    bg-gray-900
+                    bg-slate-950
                     text-white
+                    border-b
+                    border-slate-800
                     px-8
                     py-4
                     flex
@@ -849,11 +851,15 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                         type="button"
                         onClick={onOpenDashboard}
                         className="
-                            bg-blue-600
+                            bg-white/10
+                            text-slate-100
+                            border
+                            border-white/10
                             px-4
                             py-2
                             rounded-lg
-                            hover:bg-blue-500
+                            hover:bg-white/15
+                            transition-colors
                         "
                     >
                         대시보드
@@ -865,11 +871,16 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                         type="button"
                         onClick={onLogout}
                         className="
-                            bg-gray-700
+                            bg-transparent
+                            text-slate-300
+                            border
+                            border-slate-700
                             px-4
                             py-2
                             rounded-lg
-                            hover:bg-gray-600
+                            hover:bg-slate-800
+                            hover:text-white
+                            transition-colors
                         "
                     >
                         로그아웃
@@ -899,12 +910,14 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                         <button
                             onClick={handleOpenCreate}
                             className="
-                                bg-green-600
+                                bg-slate-900
                                 text-white
                                 px-5
                                 py-2
                                 rounded-lg
-                                hover:bg-green-500
+                                shadow-sm
+                                hover:bg-slate-800
+                                transition-colors
                             "
                         >
                             + 배치 등록
@@ -917,7 +930,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
 
                     {runMessage && (
 
-                        <div className="mb-5 bg-white border rounded-lg px-5 py-4">
+                        <div className="mb-5 bg-white border border-slate-200 text-slate-700 rounded-xl px-5 py-4 shadow-sm">
                             {runMessage}
                         </div>
 
@@ -935,7 +948,9 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                             className="
                                 bg-white
                                 rounded-xl
-                                shadow
+                                border
+                                border-slate-200
+                                shadow-sm
                                 p-6
                                 mb-8
                                 scroll-mt-6
@@ -977,7 +992,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                                                 py-3
                                                 focus:outline-none
                                                 focus:ring-2
-                                                focus:ring-blue-500
+                                                focus:ring-slate-400
                                             "
                                             placeholder="회원 데이터 동기화"
                                         />
@@ -1006,7 +1021,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                                                 py-3
                                                 focus:outline-none
                                                 focus:ring-2
-                                                focus:ring-blue-500
+                                                focus:ring-slate-400
                                             "
                                             placeholder="0 0 2 * * ?"
                                         />
@@ -1035,7 +1050,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                                                 py-3
                                                 focus:outline-none
                                                 focus:ring-2
-                                                focus:ring-blue-500
+                                                focus:ring-slate-400
                                             "
                                             placeholder="배치 작업에 대한 설명"
                                         />
@@ -1056,7 +1071,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                                                     name="isActive"
                                                     checked={formData.isActive}
                                                     onChange={handleFormChange}
-                                                    className="w-5 h-5"
+                                                    className="w-5 h-5 accent-slate-900"
                                                 />
 
                                                 <span className="font-medium">
@@ -1076,7 +1091,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
 
                                 {formMessage && (
 
-                                    <p className="mt-4 text-red-500">
+                                    <p className="mt-4 text-rose-600">
                                         {formMessage}
                                     </p>
 
@@ -1091,13 +1106,16 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                                         type="submit"
                                         disabled={formLoading}
                                         className="
-                                            bg-blue-600
+                                            bg-slate-900
                                             text-white
                                             px-5
                                             py-2
                                             rounded-lg
-                                            hover:bg-blue-500
-                                            disabled:bg-gray-400
+                                            shadow-sm
+                                            hover:bg-slate-800
+                                            disabled:bg-slate-200
+                                            disabled:text-slate-400
+                                            transition-colors
                                         "
                                     >
 
@@ -1114,12 +1132,15 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                                         type="button"
                                         onClick={handleCloseForm}
                                         className="
-                                            bg-gray-500
-                                            text-white
+                                            bg-white
+                                            text-slate-700
+                                            border
+                                            border-slate-300
                                             px-5
                                             py-2
                                             rounded-lg
-                                            hover:bg-gray-400
+                                            hover:bg-slate-50
+                                            transition-colors
                                         "
                                     >
                                         취소
@@ -1140,20 +1161,20 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
 
                     <form
                         onSubmit={handleSearch}
-                        className="flex flex-wrap items-center gap-3 mb-5"
+                        className="flex flex-wrap items-center gap-3 mb-5 bg-white border border-slate-200 rounded-xl p-4 shadow-sm"
                     >
-                        <label htmlFor="job-keyword" className="font-medium">배치명</label>
+                        <label htmlFor="job-keyword" className="font-medium text-slate-700">배치명</label>
                         <input
                             id="job-keyword"
                             value={keywordInput}
                             onChange={(event) => setKeywordInput(event.target.value)}
                             placeholder="배치명 검색"
-                            className="border rounded-lg px-3 py-2 bg-white"
+                            className="border border-slate-300 rounded-lg px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-300"
                         />
                         <button
                             type="submit"
                             disabled={loading}
-                            className="bg-blue-600 text-white rounded-lg px-4 py-2 disabled:opacity-50"
+                            className="bg-slate-900 text-white rounded-lg px-4 py-2 shadow-sm hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 transition-colors"
                         >
                             검색
                         </button>
@@ -1164,11 +1185,11 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                                 setKeywordInput('')
                                 setQuery((prev) => ({ ...prev, page: 0, keyword: '' }))
                             }}
-                            className="border rounded-lg px-4 py-2 bg-white disabled:opacity-50"
+                            className="border border-slate-300 rounded-lg px-4 py-2 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 transition-colors"
                         >
                             초기화
                         </button>
-                        <label htmlFor="job-page-size" className="font-medium">표시 건수</label>
+                        <label htmlFor="job-page-size" className="font-medium text-slate-700">표시 건수</label>
                         <select
                             id="job-page-size"
                             value={query.size}
@@ -1178,7 +1199,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                                 page: 0,
                                 size: Number(event.target.value),
                             }))}
-                            className="border rounded-lg px-3 py-2 bg-white"
+                            className="border border-slate-300 rounded-lg px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-300"
                         >
                             <option value={10}>10건</option>
                             <option value={20}>20건</option>
@@ -1193,7 +1214,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
 
                     {message && (
 
-                        <p className="text-red-500 mb-4">
+                        <p className="text-rose-600 mb-4">
                             {message}
                         </p>
 
@@ -1202,11 +1223,11 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
 
                     {!loading && !message && batchJobs.length > 0 && (
 
-                        <div className="bg-white rounded-xl shadow overflow-x-auto">
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
 
                             <table className="w-full min-w-[1100px]">
 
-                                <thead className="bg-gray-200">
+                                <thead className="bg-slate-50 text-slate-600">
 
                                 <tr>
 
@@ -1245,7 +1266,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
 
                                     <tr
                                         key={job.id}
-                                        className="border-t"
+                                        className="border-t border-slate-100 hover:bg-slate-50/70 transition-colors"
                                     >
 
                                         <td className="px-5 py-4">
@@ -1272,15 +1293,15 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
 
                                             {job.isActive ? (
 
-                                                <span className="text-green-600 font-medium">
-                                                        활성
-                                                    </span>
+                                                <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/15">
+                                                    활성
+                                                </span>
 
                                             ) : (
 
-                                                <span className="text-red-500 font-medium">
-                                                        비활성
-                                                    </span>
+                                                <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500 ring-1 ring-inset ring-slate-200">
+                                                    비활성
+                                                </span>
 
                                             )}
 
@@ -1300,14 +1321,21 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                                                         !job.isActive
                                                     }
                                                     className="
-                                                            bg-blue-600
+                                                            bg-slate-900
                                                             text-white
-                                                            px-3
+                                                            px-3.5
                                                             py-2
                                                             rounded-lg
-                                                            hover:bg-blue-500
-                                                            disabled:bg-gray-400
+                                                            text-sm
+                                                            font-medium
+                                                            shadow-sm
+                                                            hover:bg-slate-800
+                                                            disabled:bg-slate-100
+                                                            disabled:text-slate-400
+                                                            disabled:border
+                                                            disabled:border-slate-200
                                                             disabled:cursor-not-allowed
+                                                            transition-colors
                                                         "
                                                 >
 
@@ -1326,12 +1354,18 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                                                         onOpenExecutions(job.id)
                                                     }
                                                     className="
-                                                        bg-gray-700
-                                                        text-white
-                                                        px-4
+                                                        bg-white
+                                                        text-slate-700
+                                                        border
+                                                        border-slate-300
+                                                        px-3.5
                                                         py-2
                                                         rounded-lg
-                                                        hover:bg-gray-600
+                                                        text-sm
+                                                        font-medium
+                                                        hover:bg-slate-50
+                                                        hover:border-slate-400
+                                                        transition-colors
                                                     "
                                                 >
                                                     이력
@@ -1343,12 +1377,18 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                                                 <button
                                                     onClick={() => handleOpenEdit(job)}
                                                     className="
-                                                            bg-yellow-500
-                                                            text-white
-                                                            px-3
+                                                            bg-white
+                                                            text-slate-700
+                                                            border
+                                                            border-slate-300
+                                                            px-3.5
                                                             py-2
                                                             rounded-lg
-                                                            hover:bg-yellow-400
+                                                            text-sm
+                                                            font-medium
+                                                            hover:bg-slate-50
+                                                            hover:border-slate-400
+                                                            transition-colors
                                                         "
                                                 >
                                                     수정
@@ -1364,12 +1404,18 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                                                             handleDeactivate(job)
                                                         }
                                                         className="
-                                                                bg-red-600
-                                                                text-white
-                                                                px-3
+                                                                bg-rose-50
+                                                                text-rose-700
+                                                                border
+                                                                border-rose-200
+                                                                px-3.5
                                                                 py-2
                                                                 rounded-lg
-                                                                hover:bg-red-500
+                                                                text-sm
+                                                                font-medium
+                                                                hover:bg-rose-100
+                                                                hover:border-rose-300
+                                                                transition-colors
                                                             "
                                                     >
                                                         비활성화
@@ -1396,7 +1442,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
 
                     {!loading && !message && (
                         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                            <p className="text-gray-600" aria-live="polite">
+                            <p className="text-slate-600" aria-live="polite">
                                 {totalElements === 0
                                     ? '조회된 배치 작업이 없습니다.'
                                     : `총 ${totalElements}건 · ${query.page * query.size + 1}–${query.page * query.size + batchJobs.length}건 표시`}
@@ -1407,7 +1453,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                                         type="button"
                                         disabled={query.page === 0}
                                         onClick={() => handlePageChange(query.page - 1)}
-                                        className="border rounded-lg bg-white px-4 py-2 disabled:opacity-40"
+                                        className="border border-slate-300 rounded-lg bg-white text-slate-700 px-4 py-2 hover:bg-slate-50 disabled:opacity-40 transition-colors"
                                     >
                                         이전
                                     </button>
@@ -1416,7 +1462,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                                         type="button"
                                         disabled={query.page + 1 >= totalPages}
                                         onClick={() => handlePageChange(query.page + 1)}
-                                        className="border rounded-lg bg-white px-4 py-2 disabled:opacity-40"
+                                        className="border border-slate-300 rounded-lg bg-white text-slate-700 px-4 py-2 hover:bg-slate-50 disabled:opacity-40 transition-colors"
                                     >
                                         다음
                                     </button>
@@ -1440,7 +1486,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                                 최근 실행 이력 10건
                             </h2>
 
-                            <p className="text-gray-600 mb-5">
+                            <p className="text-slate-600 mb-5">
                                 {selectedJob.name}
                             </p>
 
@@ -1452,7 +1498,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
 
                             {executionMessage && (
 
-                                <p className="text-red-500 mb-4">
+                                <p className="text-rose-600 mb-4">
                                     {executionMessage}
                                 </p>
 
@@ -1462,11 +1508,11 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                             {!executionLoading &&
                                 executions.length > 0 && (
 
-                                    <div className="bg-white rounded-xl shadow overflow-x-auto">
+                                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
 
                                         <table className="w-full min-w-[1000px]">
 
-                                            <thead className="bg-gray-200">
+                                            <thead className="bg-slate-50 text-slate-600">
 
                                             <tr>
 
@@ -1513,7 +1559,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
 
                                                 <tr
                                                     key={execution.id}
-                                                    className="border-t"
+                                                    className="border-t border-slate-100 hover:bg-slate-50/70 transition-colors"
                                                 >
 
                                                     <td className="px-5 py-4">
@@ -1525,25 +1571,25 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
 
                                                         {execution.status === 'SUCCESS' ? (
 
-                                                            <span className="text-green-600 font-medium">
+                                                            <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/15">
                                                                     SUCCESS
                                                                 </span>
 
                                                         ) : execution.status === 'FAILED' ? (
 
-                                                            <span className="text-red-500 font-medium">
+                                                            <span className="inline-flex rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 ring-1 ring-inset ring-rose-600/15">
                                                                     FAILED
                                                                 </span>
 
                                                         ) : execution.status === 'RUNNING' ? (
 
-                                                            <span className="text-blue-500 font-medium">
+                                                            <span className="inline-flex rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-600/15">
                                                                     RUNNING
                                                                 </span>
 
                                                         ) : (
 
-                                                            <span className="text-gray-500 font-medium">
+                                                            <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-inset ring-slate-200">
                                                                     {execution.status}
                                                                 </span>
 
@@ -1590,12 +1636,18 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                                                                 )
                                                             }
                                                             className="
-                                                                    bg-gray-700
-                                                                    text-white
-                                                                    px-3
+                                                                    bg-white
+                                                                    text-slate-700
+                                                                    border
+                                                                    border-slate-300
+                                                                    px-3.5
                                                                     py-2
                                                                     rounded-lg
-                                                                    hover:bg-gray-600
+                                                                    text-sm
+                                                                    font-medium
+                                                                    hover:bg-slate-50
+                                                                    hover:border-slate-400
+                                                                    transition-colors
                                                                 "
                                                         >
                                                             상세
@@ -1620,7 +1672,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                                 !executionMessage &&
                                 executions.length === 0 && (
 
-                                    <div className="bg-white rounded-lg p-5">
+                                    <div className="bg-white border border-slate-200 rounded-xl p-5 text-slate-600">
                                         실행 이력이 없습니다.
                                     </div>
 
@@ -1639,7 +1691,9 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                                         mt-8
                                         bg-white
                                         rounded-xl
-                                        shadow
+                                        border
+                                        border-slate-200
+                                        shadow-sm
                                         p-6
                                         scroll-mt-6
                                     "
@@ -1657,7 +1711,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
 
                                     {detailMessage && (
 
-                                        <p className="text-red-500 mb-4">
+                                        <p className="text-rose-600 mb-4">
                                             {detailMessage}
                                         </p>
 
@@ -1672,7 +1726,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
 
                                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
 
-                                                <div className="bg-gray-50 rounded-lg p-4">
+                                                <div className="bg-slate-50 border border-slate-100 rounded-lg p-4">
 
                                                     <p className="text-sm text-gray-500">
                                                         상태
@@ -1685,7 +1739,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                                                 </div>
 
 
-                                                <div className="bg-gray-50 rounded-lg p-4">
+                                                <div className="bg-slate-50 border border-slate-100 rounded-lg p-4">
 
                                                     <p className="text-sm text-gray-500">
                                                         실행 방식
@@ -1698,26 +1752,26 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                                                 </div>
 
 
-                                                <div className="bg-gray-50 rounded-lg p-4">
+                                                <div className="bg-slate-50 border border-slate-100 rounded-lg p-4">
 
                                                     <p className="text-sm text-gray-500">
                                                         성공 건수
                                                     </p>
 
-                                                    <p className="font-bold mt-1 text-green-600">
+                                                    <p className="font-bold mt-1 text-emerald-700">
                                                         {selectedExecution.successCount ?? '-'}
                                                     </p>
 
                                                 </div>
 
 
-                                                <div className="bg-gray-50 rounded-lg p-4">
+                                                <div className="bg-slate-50 border border-slate-100 rounded-lg p-4">
 
                                                     <p className="text-sm text-gray-500">
                                                         실패 건수
                                                     </p>
 
-                                                    <p className="font-bold mt-1 text-red-500">
+                                                    <p className="font-bold mt-1 text-rose-600">
                                                         {selectedExecution.failCount ?? '-'}
                                                     </p>
 
@@ -1735,17 +1789,17 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
 
                                             {executionErrors.length === 0 ? (
 
-                                                <div className="bg-gray-50 p-4 rounded-lg mb-8 text-gray-600">
+                                                <div className="bg-gray-50 p-4 rounded-lg mb-8 text-slate-600">
                                                     오류 이력이 없습니다.
                                                 </div>
 
                                             ) : (
 
-                                                <div className="overflow-x-auto border rounded-lg mb-8">
+                                                <div className="overflow-x-auto border border-slate-200 rounded-xl mb-8">
 
                                                     <table className="w-full">
 
-                                                        <thead className="bg-gray-100">
+                                                        <thead className="bg-slate-50 text-slate-600">
 
                                                         <tr>
 
@@ -1775,7 +1829,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
 
                                                             <tr
                                                                 key={error.id}
-                                                                className="border-t"
+                                                                className="border-t border-slate-100 hover:bg-slate-50/70 transition-colors"
                                                             >
 
                                                                 <td className="px-4 py-3">
@@ -1786,7 +1840,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
                                                                     {error.exceptionType}
                                                                 </td>
 
-                                                                <td className="px-4 py-3 text-red-500">
+                                                                <td className="px-4 py-3 text-rose-600">
                                                                     {error.errorMessage}
                                                                 </td>
 
@@ -1818,17 +1872,17 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
 
                                             {notifications.length === 0 ? (
 
-                                                <div className="bg-gray-50 p-4 rounded-lg text-gray-600">
+                                                <div className="bg-gray-50 p-4 rounded-lg text-slate-600">
                                                     알림 이력이 없습니다.
                                                 </div>
 
                                             ) : (
 
-                                                <div className="overflow-x-auto border rounded-lg">
+                                                <div className="overflow-x-auto border border-slate-200 rounded-xl">
 
                                                     <table className="w-full">
 
-                                                        <thead className="bg-gray-100">
+                                                        <thead className="bg-slate-50 text-slate-600">
 
                                                         <tr>
 
@@ -1858,7 +1912,7 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
 
                                                             <tr
                                                                 key={notification.id}
-                                                                className="border-t"
+                                                                className="border-t border-slate-100 hover:bg-slate-50/70 transition-colors"
                                                             >
 
                                                                 <td className="px-4 py-3">
@@ -1869,13 +1923,13 @@ function BatchJobListPage({ accessToken, onLogout, onOpenDashboard, onOpenExecut
 
                                                                     {notification.status === 'SUCCESS' ? (
 
-                                                                        <span className="text-green-600 font-medium">
+                                                                        <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/15">
                                                                                 SUCCESS
                                                                             </span>
 
                                                                     ) : (
 
-                                                                        <span className="text-red-500 font-medium">
+                                                                        <span className="inline-flex rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 ring-1 ring-inset ring-rose-600/15">
                                                                                 {notification.status}
                                                                             </span>
 
