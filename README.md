@@ -6,7 +6,7 @@
 - 개발 인원: 1명
 - 담당 범위: 설계, 백엔드 API, 관리 화면, DB, AWS 배포 및 CI/CD 구성
 - 시연 주소: http://pgy-batch.duckdns.org/login
-- 시연 계정: ID - admin, password = admin1234!
+- 시연 계정: ID - admin, PASSWORD = admin1234!
   
 ## 프로젝트를 시작한 배경
 
